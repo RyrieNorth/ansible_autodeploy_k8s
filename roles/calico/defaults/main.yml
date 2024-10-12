@@ -1,0 +1,2 @@
+calico_ipv4_cidr: 10.244.0.0/16
+calico_interface: "{{ ansible_default_ipv4.alias }}"

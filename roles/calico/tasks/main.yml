@@ -1,0 +1,24 @@
+- name: To check calico images exists
+  shell: |
+    docker images | egrep "cni|node|kube-controllers"
+    if [[ $? = 1 ]];then echo "1";else echo "0";fi
+  register: images_result
+  when: "'k8s-master in inventory_hostname'"
+
+- name: To check calico cni already applied
+  shell: |
+    kubectl get pods -A | grep calico
+    if [[ $? = 1 ]];then echo "1";else echo "0";fi
+  register: calico_result
+  when: "'k8s-master in inventory_hostname'"
+
+- name: Copy calico template to k8s-master
+  template:
+    src: calico.j2
+    dest: /tmp/calico.yaml
+  when: "'k8s-master' in inventory_hostname and images_result.stdout == '1' and calico_result.stdout == '1'"
+
+- name: Apply calico cni
+  shell: |
+    kubectl apply -f /tmp/calico.yaml
+  when: "'k8s-master' in inventory_hostname and images_result.stdout == '1' and calico_result.stdout == '1'" 

@@ -1,0 +1,2 @@
+timesync_ntp_servers: 127.0.0.1
+local_network: 127.0.0.0/8

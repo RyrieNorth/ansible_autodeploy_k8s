@@ -1,0 +1,94 @@
+# 主机环境：
+| k8s-master	| 11.0.1.168 |	
+| k8s-node1	| 11.0.1.169 |
+| k8s-node2	| 11.0.1.170 |
+
+# 基础环境配置 # 
+
+# 所有节点添加hosts解析
+cat >> /etc/hosts << EOF
+11.0.1.168 k8s-master
+11.0.1.169 k8s-node1
+11.0.1.170 k8s-node2
+EOF
+
+# master节点安装所需工具
+yum install -y vim bash-com* net-tools expect
+
+# 将vim设置为黏贴模式，防止复制时自动缩进
+echo "set paste" >> /root/.vimrc
+
+# master节点对所有node节点（包括本身免密）#
+
+# 创建SSH密钥对
+cd /root
+ssh-keygen -t rsa -N "" -f /root/.ssh/id_rsa
+
+# 使用expect命令同其他受控节点进行免密
+for i in {k8s-master,k8s-node1,k8s-node2};do expect <<EOF
+spawn ssh-copy-id -i /root/.ssh/id_rsa.pub root@$i
+expect "yes/no" {send yes\r}
+expect "password" {send 000000\r}
+expect eof
+EOF
+done
+
+# master节点安装epel-release源
+yum install -y epel-release.noarch
+
+# master节点安装ansible
+yum install -y ansible
+
+# master节点配置inventory_list
+cat >> /etc/ansible/hosts <<EOF
+[master]
+k8s-master ansible_host=11.0.1.168
+
+[nodes]
+k8s-node1 ansible_host=11.0.1.169 
+k8s-node2 ansible_host=11.0.1.170 
+EOF
+
+# 测试所有节点是否能通信
+[root@localhost ~]# ansible -m ping all 
+k8s-node2 | SUCCESS => {
+    "ansible_facts": {
+        "discovered_interpreter_python": "/usr/bin/python"
+    }, 
+    "changed": false, 
+    "ping": "pong"
+}
+k8s-node1 | SUCCESS => {
+    "ansible_facts": {
+        "discovered_interpreter_python": "/usr/bin/python"
+    }, 
+    "changed": false, 
+    "ping": "pong"
+}
+k8s-master | SUCCESS => {
+    "ansible_facts": {
+        "discovered_interpreter_python": "/usr/bin/python"
+    }, 
+    "changed": false, 
+    "ping": "pong"
+}
+
+# 配置roles相关变量
+- hosts: all
+  vars:
+    timesync_ntp_servers:
+      - ntp.ntsc.ac.cn
+      - ntp.aliyun.com
+    registry_mirrors: https://docker.mirrors.ustc.edu.cn/
+    insecure_registries: http://192.168.1.115
+    k8s_image_Repository: registry.aliyuncs.com/google_containers
+    k8s_clusterName:
+    k8s_serviceSubnet:
+    k8s_podSubnet:
+    calico_ipv4_cidr:
+    calico_interface:
+  roles:
+    - prepare
+    - docker-ce
+    - kubernetes
+    - calico

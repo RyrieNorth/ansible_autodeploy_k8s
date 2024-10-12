@@ -1,0 +1,21 @@
+- name: Install Docker CE
+  yum:
+    name: docker-ce
+    state: present
+
+- name: Enable docker service
+  service:
+    name: docker
+    state: started
+    enabled: yes
+
+- name: Config docker daemon file
+  template:
+    src: docker_daemon.j2
+    dest: /etc/docker/daemon.json
+
+- name: Reload docker
+  service:
+    name: docker
+    state: restarted
+    daemon_reload: yes

@@ -1,0 +1,7 @@
+- name: Config kernel tuning
+  template:
+    src: kernel_parameters.j2
+    dest: /etc/sysctl.d/99-sysctl.conf
+
+- name: Apply parameters
+  shell: sysctl --system

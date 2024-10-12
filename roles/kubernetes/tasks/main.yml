@@ -1,0 +1,99 @@
+- name: Check kubernetes packages if installed
+  shell: |
+    yum list installed | egrep "kubelet|kubectl|kubeadm"
+    if [[ $? = 1 ]];then echo "1";else echo "0";fi
+  register: packages_result
+
+- name: Check kubernetes images if already pull
+  shell: |
+    docker images | egrep "kube-apiserver|kube-scheduler|kube-proxy|kube-controller-manager|etcd|coredns|pause"
+    if [[ $? = 1 ]];then echo "1";else echo "0";fi
+  register: images_result
+
+- name: Check kubernetes cluster if exists
+  shell: |
+    ss -ntlpu | grep kube-apiserver 
+    if [[ $? = 1 ]];then echo "1";else echo "0";fi
+  register: cluster_result
+  when: "'k8s-master' in inventory_hostname"
+
+- name: Check kubernetes nodes if already in cluster k8s-master
+  shell: |
+    ss -ntlpu | grep kubelet
+    if [[ $? = 1 ]];then echo "1";else echo "0";fi
+  register: nodes_result
+
+- name: Install kubernetes
+  shell: |
+    yum -y install kubeadm-1.23.17-0 kubelet-1.23.17-0 kubectl-1.23.17-0
+  when: packages_result.stdout == "1"
+
+- name: Pre pull kubernetes images (1/2)
+  template:
+    src: kubeadm-init.j2
+    dest: /tmp/kubeadm-init.yaml
+  when: images_result.stdout == "1"
+
+- name: Pre Pull kubernetes images (2/2)
+  shell: |
+    kubeadm config images pull --config /tmp/kubeadm-init.yaml
+  when: images_result.stdout == "1"
+
+- name: Init kubernetes cluster
+  shell: |
+    kubeadm init --config /tmp/kubeadm-init.yaml > /tmp/kubeadm-init.log
+  when:
+    - "'k8s-master' in inventory_hostname"
+    - cluster_result.stdout == "1"
+
+- name: Create .kube directory
+  file:
+    path: /root/.kube
+    state: directory
+    mode: 0755
+  when:
+    - "'k8s-master' in inventory_hostname"
+    - cluster_result.stdout == "1"
+
+- name: Copy kubernetes admin conf
+  copy:
+    src: /etc/kubernetes/admin.conf
+    dest: /root/.kube/config
+  when:
+    - "'k8s-master' in inventory_hostname"
+    - cluster_result.stdout == "1"
+
+- name: Get join token
+  shell: |
+    kubeadm token create --print-join-command
+  register: res
+  when:
+    - "'k8s-master' in inventory_hostname"
+    - cluster_result.stdout == "1"
+
+- name: Copy join command to local file
+  copy:
+    content: "{{ res.stdout }}"
+    dest: /tmp/kubernetes_join_command
+  when:
+    - "'k8s-master' in inventory_hostname"
+    - cluster_result.stdout == "1"
+
+- name: Copy join command to nodes
+  copy:
+    src: /tmp/kubernetes_join_command
+    dest: /tmp
+    mode: 0777
+  when: "'k8s-master' not in inventory_hostname"
+
+- name: Join kubernetes worker nodes to cluster
+  shell: |
+    /tmp/kubernetes_join_command
+  when:
+    - "'k8s-master' not in inventory_hostname"
+    - nodes_result.stdout == "1"
+
+- name: Enable kubernetes services
+  service:
+    name: kubelet
+    enabled: yes

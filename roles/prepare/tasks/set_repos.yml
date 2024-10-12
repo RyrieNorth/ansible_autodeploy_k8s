@@ -1,0 +1,12 @@
+- name: Download Docker-CE Repo
+  get_url:
+    url: https://mirrors.ustc.edu.cn/docker-ce/linux/centos/docker-ce.repo
+    dest: /etc/yum.repos.d/
+
+- name: Config Kubernetes Repo
+  yum_repository:
+    name: kubernetes
+    description: kubernetes_repo
+    baseurl: https://mirrors.ustc.edu.cn/kubernetes/yum/repos/kubernetes-el7-x86_64/
+    enabled: yes
+    gpgcheck: no

@@ -1,0 +1,23 @@
+- name: Install ipvs ipset
+  yum:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - ipset
+    - ipvsadm
+
+- name: Enable ipvs module (1/2)
+  template:
+    src: ipvs_modules.j2
+    dest: /etc/sysconfig/modules/ipvs.modules
+    mode: u=rwx,g=rx,o=rx
+
+- name: Enable ipvs module (2/2)
+  shell: /etc/sysconfig/modules/ipvs.modules
+
+- name: Ensure ipvs module load
+  shell: lsmod | egrep "ip_vs|nf_conntrack"
+  register: res
+
+- debug:
+    var: res.stdout_lines

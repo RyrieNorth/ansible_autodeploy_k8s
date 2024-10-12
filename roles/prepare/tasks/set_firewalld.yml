@@ -1,0 +1,60 @@
+- name: Disable firewalld 
+  service:
+    name: firewalld
+    state: stopped
+    enabled: false
+
+- name: Install Iptables Services
+  yum:
+    name: iptables-services
+    state: present 
+
+- name: Flush iptables chains
+  iptables:
+    chain: "{{ item }}"
+    flush: yes
+  loop:
+    - INPUT
+    - FORWARD
+    - OUTPUT
+
+- name: Flush iptables nat table
+  iptables:
+    chain: "{{ item }}"
+    table: nat
+    flush: yes
+  loop:
+    - INPUT
+    - OUTPUT
+    - PREROUTING
+    - POSTROUTING
+
+- name: Flush iptables mangle table
+  iptables:
+    chain: "{{ item }}"
+    table: mangle
+    flush: yes
+  loop:
+    - INPUT
+    - OUTPUT
+    - FORWARD
+    - PREROUTING
+    - POSTROUTING
+  
+- name: Delete custom iptables chains
+  iptables:
+    chain: "{{ item }}"
+    state: absent
+  loop:
+    - INPUT
+    - FORWARD
+    - OUTPUT
+
+- name: Set default policy for FORWARD chain
+  iptables:
+    chain: FORWARD
+    policy: ACCEPT
+
+- name: Save iptables rules
+  shell: iptables-save > /etc/sysconfig/iptables 
+  become: yes

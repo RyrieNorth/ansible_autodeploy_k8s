@@ -1,0 +1,35 @@
+- name: Config hostname
+  include_tasks: tasks/set_hostname.yml
+
+- name: Config hosts
+  include_tasks: tasks/set_hosts.yml
+
+- name: Config yum repos
+  include_tasks: tasks/set_repos.yml
+
+- name: Install base tools
+  include_tasks: tasks/set_base_tools.yml
+
+- name: Config chronyd
+  include_tasks: tasks/set_chronyd.yml
+
+- name: Config SELinux
+  include_tasks: tasks/set_selinux.yml
+
+- name: Config firewall and iptables
+  include_tasks: tasks/set_firewalld.yml
+
+- name: Config swap
+  include_tasks: tasks/set_swap.yml
+
+- name: Config ipvs
+  include_tasks: tasks/set_ipvs.yml
+
+- name: Config ip_forward
+  include_tasks: tasks/set_ip_forward.yml
+
+- name: Config kernel_parameters
+  include_tasks: tasks/set_kernel_parameters.yml
+
+- name: Config system resource limits
+  include_tasks: tasks/set_limits.yml

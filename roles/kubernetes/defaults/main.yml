@@ -1,0 +1,4 @@
+k8s_imageRepository: registry.aliyuncs.com/google_containers
+k8s_clusterName: kubernetes
+k8s_serviceSubnet: 10.96.0.0/12
+k8s_podSubnet: 10.244.0.0/16

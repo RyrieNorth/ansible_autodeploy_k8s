@@ -1,0 +1,47 @@
+apiVersion: kubeadm.k8s.io/v1beta2
+bootstrapTokens:
+- groups:
+  - system:bootstrappers:kubeadm:default-node-token
+  token: abcdef.0123456789abcdef
+  ttl: 24h0m0s
+  usages:
+  - signing
+  - authentication
+kind: InitConfiguration
+localAPIEndpoint:
+  advertiseAddress: {{ hostvars[groups['master'][0]]['ansible_host'] }}
+  bindPort: 6443
+nodeRegistration:
+  criSocket: /var/run/dockershim.sock
+  name: {{ hostvars[groups['master'][0]]['ansible_hostname'] }}
+  taints:
+  - effect: "NoSchedule"
+    key: "node-role.kubernetes.io/{{ hostvars[groups['master'][0]]['ansible_hostname'] }}"
+---
+apiServer:
+  timeoutForControlPlane: 4m0s
+apiVersion: kubeadm.k8s.io/v1beta2
+certificatesDir: /etc/kubernetes/pki
+clusterName: {{ k8s_clusterName }}
+controllerManager: {}
+dns:
+  type: CoreDNS
+etcd:
+  local:
+    dataDir: /var/lib/etcd
+imageRepository: {{ k8s_image_Repository }}
+kind: ClusterConfiguration
+kubernetesVersion: v1.23.17
+networking:
+  dnsDomain: cluster.local
+  serviceSubnet: {{ k8s_serviceSubnet }}
+  podSubnet: {{ k8s_podSubnet }}
+scheduler: {}
+--- 
+apiVersion: kubeproxy.config.k8s.io/v1alpha1
+kind: KubeProxyConfiguration 
+mode: ipvs 
+--- 
+apiVersion: kubelet.config.k8s.io/v1beta1
+kind: KubeletConfiguration 
+cgroupDriver: systemd

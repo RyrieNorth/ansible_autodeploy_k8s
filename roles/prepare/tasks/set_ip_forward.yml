@@ -1,0 +1,31 @@
+- name: Config br_nerfilter
+  template:
+    src: k8s_modules.j2
+    dest: /etc/modules-load.d/k8s.conf
+
+- name: Enable modules
+  service:
+    name: systemd-modules-load
+    state: restarted 
+
+- name: Config ip_forward
+  template: 
+    src: k8s_ip_forward.j2
+    dest: /etc/sysctl.d/k8s.conf
+
+- name: Apply parameters
+  shell: sysctl --system
+
+- name: Ensure modules in effect
+  shell: lsmod | egrep "br_netfilter|overlay"
+  register: res
+
+- debug:
+    var: res.stdout_lines
+
+- name: Ensure parameters in effect
+  shell: sysctl net.bridge.bridge-nf-call-iptables net.bridge.bridge-nf-call-ip6tables net.ipv4.ip_forward
+  register: res
+
+- debug:
+    var: res.stdout_lines

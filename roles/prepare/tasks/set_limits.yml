@@ -1,0 +1,11 @@
+- name: Config resource limits
+  template:
+    src: resource_limits.j2
+    dest: /etc/security/limits.conf
+
+- name: Ensure resource limits apply
+  shell: ulimit -a
+  register: res
+
+- debug:
+    var: res.stdout_lines
